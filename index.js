@@ -89,11 +89,10 @@ app.get("/home_page", async function(req, res){
 
     const options = {
         apiKey: lyric_token,
-        title: 'Posthumous Forgiveness',
-        artist: 'Tame Impala',
+        title: song,
+        artist: artist,
         optimizeQuery: true
     };
-
     const lyrics_data = await getLyrics(options)
 
 
@@ -101,8 +100,6 @@ app.get("/home_page", async function(req, res){
     let search_data = await search.body.tracks
     const  song_id = search_data.items[0].id
 
-    //search = await spotifyApi.getTrack(song_id)
-    //let song_url = search.body.external_urls.spotify
 
     const change = await fetch("https://api.spotify.com/v1/me/player/play", {
         method: "put",
@@ -115,7 +112,7 @@ app.get("/home_page", async function(req, res){
         })
     })
 
-    console.log(change)
+    console.log(lyrics_data)
 
 });
 
