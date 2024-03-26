@@ -24,8 +24,10 @@
     "express": "^4.19.1",
     "genius-lyrics-api": "^3.2.1",
     "node-fetch": "^3.3.2",
+    "open": "^10.1.0",
     "request": "^2.88.2",
     "spotify-web-api-js": "^1.5.2",
+    "spotify-web-api-node": "^5.0.2",
     "xhr2": "^0.2.1"
   }
 }

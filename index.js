@@ -2,7 +2,7 @@ const { error } = require("console");
 const express = require("express");
 const { url } = require("inspector");
 const querystring = require("querystring")
-const {request} = require("axios");
+const {request, get} = require("axios");
 const { getLyrics, getSong } = require('genius-lyrics-api')
 const {join} = require("path");
 
@@ -20,10 +20,19 @@ const redirect_uri = "http://localhost:5000/callback";
 let token;
 let lyric_token;
 
+const SpotifyWebApi = require('spotify-web-api-node');
+
+// credentials are optional
+let spotifyApi = new SpotifyWebApi({
+    clientId: 'fcecfc72172e4cd267473117a17cbd4d',
+    clientSecret: 'a6338157c9bb5ac9c71924cb2940e1a7',
+    redirectUri: redirect_uri
+});
+
 app.get("/", function(request, response){
 
     var state = Math.random(12).toString();
-    var scope = 'user-read-private user-read-email';
+    var scope = 'user-read-private user-read-email user-modify-playback-state';
     
     response.redirect(
         "https://accounts.spotify.com/authorize?" + querystring.stringify({
@@ -40,7 +49,7 @@ app.get("/", function(request, response){
 app.get("/callback", async function(req, res){
     let code = req.query.code || null;
     let state = req.query.state || null;
-    let scope = 'user-read-private user-read-email';
+    let scope = 'user-read-private user-read-email user-modify-playback-state';
 
     const authOptions = {
         url: 'https://accounts.spotify.com/api/token',
@@ -58,6 +67,7 @@ app.get("/callback", async function(req, res){
     const data = resource.data['access_token']
     token = data
 
+    spotifyApi.setAccessToken(token)
     console.log(data)
     res.redirect("/lyric")
 });
@@ -66,6 +76,10 @@ app.get("/callback", async function(req, res){
 app.get("/home_page", async function(req, res){
 
     //res.sendFile(join(__dirname, "views/index.html"));
+
+    const song = "my name is dark"
+    const type = "track"
+    const artist = "grimes"
 
     const user_data = await fetch('https://api.spotify.com/v1/me', {
         headers: {
@@ -81,9 +95,27 @@ app.get("/home_page", async function(req, res){
     };
 
     const lyrics_data = await getLyrics(options)
-    const user = await user_data.json()
-    //console.log(user)
 
+
+    let search = await spotifyApi.searchTracks("track:"+song+" artist:"+artist)
+    let search_data = await search.body.tracks
+    const  song_id = search_data.items[0].id
+
+    //search = await spotifyApi.getTrack(song_id)
+    //let song_url = search.body.external_urls.spotify
+
+    const change = await fetch("https://api.spotify.com/v1/me/player/play", {
+        method: "put",
+        headers:{
+            Authorization: 'Bearer '+token,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            uris: ["spotify:track:"+song_id]
+        })
+    })
+
+    console.log(change)
 
 });
 
