@@ -5,22 +5,23 @@ const querystring = require("querystring")
 const {request, get} = require("axios");
 const { getLyrics, getSong } = require('genius-lyrics-api')
 const {join} = require("path");
+const bodyParser = require('body-parser')
+const fs = require("node:fs")
 
 const app = express();
-
+const SpotifyWebApi = require('spotify-web-api-node');
+const {cache} = require("express/lib/application");
 
 const client_id = "ffd3c86bf9f24392a54b12e85028da31";
 const client_key = "6145451981f642dbb267e684a63dc164";
-
 const lyrics_client = "Frq-MWqjqhm4MhB9KQ1hgC6eZaBMxU9RUAeAu8EaXKb1R0kJmpeyvHD5zw8c3Dn1"
 const lyrics_key = "15sqUS2PW7hf9-21hGqfxg5P1MITGPie94tr9q73TJanVmZf8I6_2k4PnUSDIAvTSyDQvNRgiJD27SyPPDpBSA"
-
 const redirect_uri = "http://localhost:5000/callback";
+const jsonParser = bodyParser.json()
 
 let token;
 let lyric_token;
 
-const SpotifyWebApi = require('spotify-web-api-node');
 
 // credentials are optional
 let spotifyApi = new SpotifyWebApi({
@@ -31,8 +32,8 @@ let spotifyApi = new SpotifyWebApi({
 
 app.get("/", function(request, response){
 
-    var state = Math.random(12).toString();
-    var scope = 'user-read-private user-read-email user-modify-playback-state';
+    let state = Math.random(12).toString();
+    let scope = 'user-read-private user-read-email user-modify-playback-state';
     
     response.redirect(
         "https://accounts.spotify.com/authorize?" + querystring.stringify({
@@ -73,48 +74,6 @@ app.get("/callback", async function(req, res){
 });
 
 
-app.get("/home_page", async function(req, res){
-
-    //res.sendFile(join(__dirname, "views/index.html"));
-
-    const song = "my name is dark"
-    const type = "track"
-    const artist = "grimes"
-
-    const user_data = await fetch('https://api.spotify.com/v1/me', {
-        headers: {
-            Authorization: 'Bearer ' + token
-        }
-    });
-
-    const options = {
-        apiKey: lyric_token,
-        title: song,
-        artist: artist,
-        optimizeQuery: true
-    };
-    const lyrics_data = await getLyrics(options)
-
-
-    let search = await spotifyApi.searchTracks("track:"+song+" artist:"+artist)
-    let search_data = await search.body.tracks
-    const  song_id = search_data.items[0].id
-
-
-    const change = await fetch("https://api.spotify.com/v1/me/player/play", {
-        method: "put",
-        headers:{
-            Authorization: 'Bearer '+token,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            uris: ["spotify:track:"+song_id]
-        })
-    })
-
-    console.log(lyrics_data)
-
-});
 
 app.get("/lyric", async function(req, res){
     res.redirect(
@@ -150,7 +109,76 @@ app.get("/lyric_callback", async function(req, res){
 })
 
 
-
-app.listen(5000, function(){
+app.get("/home_page", async function(req, res){
+    res.sendFile(join(__dirname, "Webpage/index.html"));
 
 });
+
+app.post("/lyric", jsonParser, async function(req, res){
+
+    const song_name = req.body.song_name
+    const artist_name = req.body.artist_name
+
+    //console.log(artist_name)
+
+    const lyrics = await search_lyrics(song_name, artist_name)
+    await play_song(song_name, artist_name)
+
+    fs.writeFile('cache/'+song_name, lyrics, err => {
+        if(err){
+            console.error(err)
+        }
+    })
+
+    let lyric_text = "No Subtitles available :("
+    fs.readFile("cache/"+song_name, "utf-8", (err,data) => {
+        if(err){
+            console.error(err)
+        }else{
+            const lyric_text = data
+        }
+    })
+    res.send(lyrics)
+
+})
+
+async function play_song(song_name, artist_name){
+    let search = await spotifyApi.searchTracks("track:"+song_name+" artist:"+artist_name)
+    let search_data = await search.body.tracks
+    const  song_id = search_data.items[0].id
+
+
+    const change = await fetch("https://api.spotify.com/v1/me/player/play", {
+        method: "put",
+        headers:{
+            Authorization: 'Bearer '+token,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            uris: ["spotify:track:"+song_id]
+        })
+    })
+}
+
+async function search_lyrics(song_name, artist_name){
+    const options = {
+        apiKey: lyric_token,
+        title: song_name,
+        artist: artist_name,
+        optimizeQuery: true
+    };
+
+    return getLyrics(options)
+}
+
+app.use(express.static(join(__dirname, 'Webpage')))
+
+app.listen(5000, '0.0.0.0',function(){
+
+});
+
+// const user_data = await fetch('https://api.spotify.com/v1/me', {
+//     headers: {
+//         Authorization: 'Bearer ' + token
+//     }
+// });
