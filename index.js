@@ -7,10 +7,13 @@ const { getLyrics, getSong } = require('genius-lyrics-api')
 const {join} = require("path");
 const bodyParser = require('body-parser')
 const fs = require("node:fs")
+const Readable = require('stream').Readable;
+
 
 const app = express();
 const SpotifyWebApi = require('spotify-web-api-node');
 const {cache} = require("express/lib/application");
+const axios = require("axios");
 
 const client_id = "ffd3c86bf9f24392a54b12e85028da31";
 const client_key = "6145451981f642dbb267e684a63dc164";
@@ -126,21 +129,6 @@ app.post("/lyric", jsonParser, async function(req, res){
     let lyrics = await search_lyrics(song_name, artist_name)
 
     await play_song(song_name, artist_name)
-
-    fs.writeFile('cache/'+song_name, lyrics, err => {
-        if(err){
-            console.error(err)
-        }
-    })
-
-    let lyric_text = "No Subtitles available :("
-    fs.readFile("cache/"+song_name, "utf-8", (err,data) => {
-        if(err){
-            console.error(err)
-        }else{
-            const lyric_text = data
-        }
-    })
     res.send(lyrics)
 
 })
@@ -163,25 +151,49 @@ async function play_song(song_name, artist_name){
     })
 }
 
-async function search_lyrics(song_name, artist_name){
-    let lyrics;
-    // const options = {
-    //     apiKey: lyric_token,
-    //     title: song_name,
-    //     artist: artist_name,
-    //     optimizeQuery: true
-    // };
-    //
-    // return await getLyrics(options)
+async function search_lyrics(song, artist_name){
 
-    const stream = (await fetch("https://w2yc9644t9.execute-api.us-east-1.amazonaws.com/term_project/translatedcache/" + song_name + "/")).body
-    lyrics = stream_to_string(stream)
-
+    let song_name = song.replaceAll(" ", "_")
+    let lyrics = await check_tarnslated_cache(song_name)
     if(!lyrics.includes("AccessDenied")){
         return lyrics
     }
 
+    const options = {
+        apiKey: lyric_token,
+        title: song_name,
+        artist: artist_name,
+        optimizeQuery: true
+    };
 
+    lyrics = await getLyrics(options)
+
+
+    let URL = "https://w2yc9644t9.execute-api.us-east-1.amazonaws.com/term_project/lyricscache/" + song_name + ".txt"
+    let file = Readable.from(lyrics)
+    await axios.put(encodeURI(URL), file)
+
+
+    let a;
+    for(let i=0; i<10 && (a=await check_tarnslated_cache(song_name)).includes("AccessDenied"); i++){
+        await new Promise(r=> setTimeout(r, 2000))
+        console.log("wait")
+    }
+    return a
+}
+
+
+/**
+ * function checks the s3 translated cache for the song if it was already translated
+ * @param song_name The song to search for
+ * @returns {Promise<string>} contains either the lyrics or "AccessDenied" if not
+ */
+async function check_tarnslated_cache(song_name){
+
+    let URL = "https://w2yc9644t9.execute-api.us-east-1.amazonaws.com/term_project/translatedcache/" + song_name + ".txt/"
+    const stream = (await fetch(encodeURI(URL))).body
+
+    return await stream_to_string(stream)
 }
 
 /**
@@ -195,7 +207,7 @@ async function stream_to_string(stream){
         lyrics.push(Buffer.from(s))
     }
 
-    return Buffer.concat(lyrics).toString('utf-8')
+    return Buffer.concat(lyrics).toString('utf-8');
 }
 
 
@@ -204,9 +216,3 @@ app.use(express.static(join(__dirname, 'Webpage')))
 app.listen(5000, '0.0.0.0',function(){
 
 });
-
-// const user_data = await fetch('https://api.spotify.com/v1/me', {
-//     headers: {
-//         Authorization: 'Bearer ' + token
-//     }
-// });
