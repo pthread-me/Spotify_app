@@ -63,6 +63,8 @@ app.get("/callback", async function(req, res){
         json: true
     };
 
+
+    //add try/cache
     const resource = await request(authOptions);
 
     const data = resource.data['access_token']
@@ -121,7 +123,8 @@ app.post("/lyric", jsonParser, async function(req, res){
 
     //console.log(artist_name)
 
-    const lyrics = await search_lyrics(song_name, artist_name)
+    let lyrics = await search_lyrics(song_name, artist_name)
+
     await play_song(song_name, artist_name)
 
     fs.writeFile('cache/'+song_name, lyrics, err => {
@@ -161,15 +164,40 @@ async function play_song(song_name, artist_name){
 }
 
 async function search_lyrics(song_name, artist_name){
-    const options = {
-        apiKey: lyric_token,
-        title: song_name,
-        artist: artist_name,
-        optimizeQuery: true
-    };
+    let lyrics;
+    // const options = {
+    //     apiKey: lyric_token,
+    //     title: song_name,
+    //     artist: artist_name,
+    //     optimizeQuery: true
+    // };
+    //
+    // return await getLyrics(options)
 
-    return getLyrics(options)
+    const stream = (await fetch("https://w2yc9644t9.execute-api.us-east-1.amazonaws.com/term_project/translatedcache/" + song_name + "/")).body
+    lyrics = stream_to_string(stream)
+
+    if(!lyrics.includes("AccessDenied")){
+        return lyrics
+    }
+
+
 }
+
+/**
+ * Function takes in a Readable stream and converts it into a plain text string
+ * @param stream
+ * @returns {Promise<string>}
+ */
+async function stream_to_string(stream){
+    const lyrics = []
+    for await (const s of stream){
+        lyrics.push(Buffer.from(s))
+    }
+
+    return Buffer.concat(lyrics).toString('utf-8')
+}
+
 
 app.use(express.static(join(__dirname, 'Webpage')))
 

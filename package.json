@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/pthread-me/Spotify_app#readme",
   "dependencies": {
+    "aws-sdk": "^2.1589.0",
     "axios": "^1.6.8",
     "body-parser": "^1.20.2",
     "bootstrap": "^5.3.3",
