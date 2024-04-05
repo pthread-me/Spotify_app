@@ -175,6 +175,7 @@ async function search_lyrics(song, artist_name){
 
 
     let a;
+    await new Promise(r=> setTimeout(r, 1000))
     for(let i=0; i<10 && (a=await check_tarnslated_cache(song_name)).includes("AccessDenied"); i++){
         await new Promise(r=> setTimeout(r, 2000))
         console.log("wait")
