@@ -70,11 +70,9 @@ app.get("/callback", async function(req, res){
     //add try/cache
     const resource = await request(authOptions);
 
-    const data = resource.data['access_token']
-    token = data
+    token = resource.data['access_token']
 
     spotifyApi.setAccessToken(token)
-    console.log(data)
     res.redirect("/lyric")
 });
 
@@ -124,8 +122,6 @@ app.post("/lyric", jsonParser, async function(req, res){
     const song_name = req.body.song_name
     const artist_name = req.body.artist_name
 
-    //console.log(artist_name)
-
     let lyrics = await search_lyrics(song_name, artist_name)
 
     await play_song(song_name, artist_name)
@@ -134,9 +130,24 @@ app.post("/lyric", jsonParser, async function(req, res){
 })
 
 async function play_song(song_name, artist_name){
-    let search = await spotifyApi.searchTracks("track:"+song_name+" artist:"+artist_name)
+    let search
+
+    if (artist_name.localeCompare("") === 0){
+        search = await spotifyApi.searchTracks("track:"+song_name)
+
+    }else{
+        search = await spotifyApi.searchTracks("track:"+song_name+" artist:"+artist_name)
+    }
+
     let search_data = await search.body.tracks
-    const  song_id = search_data.items[0].id
+    let song_id
+
+    if(search_data.items.length>0){
+        song_id = search_data.items[0].id
+    }else{
+        song_id = null
+    }
+
 
 
     const change = await fetch("https://api.spotify.com/v1/me/player/play", {
@@ -151,7 +162,7 @@ async function play_song(song_name, artist_name){
     })
 }
 
-async function search_lyrics(song, artist_name){
+async function search_lyrics(song, artist){
 
     let song_name = song.replaceAll(" ", "_")
     let lyrics = await check_tarnslated_cache(song_name)
@@ -159,9 +170,16 @@ async function search_lyrics(song, artist_name){
         return lyrics
     }
 
+    let artist_name
+    if (artist.localeCompare("") === 0){
+        artist_name = " "
+    }else{
+        artist_name = artist
+    }
+
     const options = {
         apiKey: lyric_token,
-        title: song_name,
+        title: song,
         artist: artist_name,
         optimizeQuery: true
     };
@@ -215,5 +233,5 @@ async function stream_to_string(stream){
 app.use(express.static(join(__dirname, 'Webpage')))
 
 app.listen(5000, '0.0.0.0',function(){
-
+    console.log("started listening")
 });
