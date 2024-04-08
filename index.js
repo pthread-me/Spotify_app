@@ -19,7 +19,7 @@ const client_id = "ffd3c86bf9f24392a54b12e85028da31";
 const client_key = "6145451981f642dbb267e684a63dc164";
 const lyrics_client = "Frq-MWqjqhm4MhB9KQ1hgC6eZaBMxU9RUAeAu8EaXKb1R0kJmpeyvHD5zw8c3Dn1"
 const lyrics_key = "15sqUS2PW7hf9-21hGqfxg5P1MITGPie94tr9q73TJanVmZf8I6_2k4PnUSDIAvTSyDQvNRgiJD27SyPPDpBSA"
-const redirect_uri = "http://localhost:5000/callback";
+const redirect_uri = "http://localhost:5000/" //"http://3.91.237.49/" "http://localhost:5000/"//"http://52.201.85.168/";
 const jsonParser = bodyParser.json()
 
 let token;
@@ -30,7 +30,7 @@ let lyric_token;
 let spotifyApi = new SpotifyWebApi({
     clientId: 'fcecfc72172e4cd267473117a17cbd4d',
     clientSecret: 'a6338157c9bb5ac9c71924cb2940e1a7',
-    redirectUri: redirect_uri
+    redirectUri: redirect_uri + "callback"
 });
 
 app.get("/", function(request, response){
@@ -43,7 +43,7 @@ app.get("/", function(request, response){
             response_type: "code",
             client_id: client_id,
             scope: scope,
-            redirect_uri: redirect_uri,
+            redirect_uri: redirect_uri + "callback",
             state: state
         })
     );
@@ -58,7 +58,7 @@ app.get("/callback", async function(req, res){
     const authOptions = {
         url: 'https://accounts.spotify.com/api/token',
         method: 'post',
-        data: 'code=' + code + '&redirect_uri=' + redirect_uri + '&grant_type=authorization_code',
+        data: 'code=' + code + '&redirect_uri=' + redirect_uri +"callback" + '&grant_type=authorization_code',
         headers: {
             'content-type': 'application/x-www-form-urlencoded',
             'Authorization': 'Basic ' + Buffer.from(client_id + ':' + client_key).toString('base64')
@@ -84,7 +84,7 @@ app.get("/lyric", async function(req, res){
             response_type: "code",
             client_id: lyrics_client,
             scope: "me",
-            redirect_uri: "http://localhost:5000/lyric_callback",
+            redirect_uri: redirect_uri + "lyric_callback",
             state: 1
         })
     );
@@ -100,7 +100,7 @@ app.get("/lyric_callback", async function(req, res){
             client_secret: lyrics_key,
             grant_type: "authorization_code",
             client_id: lyrics_client,
-            redirect_uri: "http://localhost:5000/lyric_callback",
+            redirect_uri: redirect_uri + "lyric_callback",
             response_type: "code"
         }
     };
@@ -209,7 +209,7 @@ async function search_lyrics(song, artist){
  */
 async function check_tarnslated_cache(song_name){
 
-    let URL = "https://w2yc9644t9.execute-api.us-east-1.amazonaws.com/term_project/translatedcache/" + song_name + ".txt/"
+    let URL = "https://w2yc9644t9.execute-api.us-east-1.amazonaws.com/term_project/translatedcache/" + song_name + ".txt"
     const stream = (await fetch(encodeURI(URL))).body
 
     return await stream_to_string(stream)
