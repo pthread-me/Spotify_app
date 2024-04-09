@@ -1,25 +1,22 @@
-const { error } = require("console");
 const express = require("express");
-const { url } = require("inspector");
 const querystring = require("querystring")
-const {request, get} = require("axios");
-const { getLyrics, getSong } = require('genius-lyrics-api')
+const {request} = require("axios");
+const { getLyrics} = require('genius-lyrics-api')
 const {join} = require("path");
 const bodyParser = require('body-parser')
-const fs = require("node:fs")
+require("node:fs");
 const Readable = require('stream').Readable;
 
 
 const app = express();
 const SpotifyWebApi = require('spotify-web-api-node');
-const {cache} = require("express/lib/application");
 const axios = require("axios");
 
 const client_id = "ffd3c86bf9f24392a54b12e85028da31";
 const client_key = "6145451981f642dbb267e684a63dc164";
 const lyrics_client = "Frq-MWqjqhm4MhB9KQ1hgC6eZaBMxU9RUAeAu8EaXKb1R0kJmpeyvHD5zw8c3Dn1"
 const lyrics_key = "15sqUS2PW7hf9-21hGqfxg5P1MITGPie94tr9q73TJanVmZf8I6_2k4PnUSDIAvTSyDQvNRgiJD27SyPPDpBSA"
-const redirect_uri = "http://localhost:5000/" //"http://3.91.237.49/" "http://localhost:5000/"//"http://52.201.85.168/";
+const redirect_uri = "http://34.207.254.20/" //"http://localhost:5000/"
 const jsonParser = bodyParser.json()
 
 let token;
@@ -47,14 +44,10 @@ app.get("/", function(request, response){
             state: state
         })
     );
-
 });
 
 app.get("/callback", async function(req, res){
     let code = req.query.code || null;
-    let state = req.query.state || null;
-    let scope = 'user-read-private user-read-email user-modify-playback-state';
-
     const authOptions = {
         url: 'https://accounts.spotify.com/api/token',
         method: 'post',
@@ -66,7 +59,6 @@ app.get("/callback", async function(req, res){
         json: true
     };
 
-
     //add try/cache
     const resource = await request(authOptions);
 
@@ -75,7 +67,6 @@ app.get("/callback", async function(req, res){
     spotifyApi.setAccessToken(token)
     res.redirect("/lyric")
 });
-
 
 
 app.get("/lyric", async function(req, res){
@@ -114,7 +105,6 @@ app.get("/lyric_callback", async function(req, res){
 
 app.get("/home_page", async function(req, res){
     res.sendFile(join(__dirname, "Webpage/index.html"));
-
 });
 
 app.post("/lyric", jsonParser, async function(req, res){
@@ -126,7 +116,6 @@ app.post("/lyric", jsonParser, async function(req, res){
 
     await play_song(song_name, artist_name)
     res.send(lyrics)
-
 })
 
 async function play_song(song_name, artist_name){
@@ -147,10 +136,7 @@ async function play_song(song_name, artist_name){
     }else{
         song_id = null
     }
-
-
-
-    const change = await fetch("https://api.spotify.com/v1/me/player/play", {
+    await fetch("https://api.spotify.com/v1/me/player/play", {
         method: "put",
         headers:{
             Authorization: 'Bearer '+token,
@@ -159,7 +145,7 @@ async function play_song(song_name, artist_name){
         body: JSON.stringify({
             uris: ["spotify:track:"+song_id]
         })
-    })
+    });
 }
 
 async function search_lyrics(song, artist){
@@ -185,7 +171,6 @@ async function search_lyrics(song, artist){
     };
 
     lyrics = await getLyrics(options)
-
 
     let URL = "https://w2yc9644t9.execute-api.us-east-1.amazonaws.com/term_project/lyricscache/" + song_name + ".txt"
     let file = Readable.from(lyrics)
@@ -232,6 +217,6 @@ async function stream_to_string(stream){
 
 app.use(express.static(join(__dirname, 'Webpage')))
 
-app.listen(5000, '0.0.0.0',function(){
+app.listen(80, '0.0.0.0',function(){
     console.log("started listening")
 });

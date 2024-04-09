@@ -5,6 +5,6 @@ WORKDIR /home/node/app
 COPY package*.json ./
 RUN npm install
 COPY --chown=node:node . .
-EXPOSE 5000
+EXPOSE 80
 
 CMD ["node", "index.js"]
